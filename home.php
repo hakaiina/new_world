@@ -7,15 +7,61 @@ $base_path = '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Новый Мир - Установка окон и балконов в Вологде</title>
-    <link rel="stylesheet" href="<?php echo CSS_PATH; ?>/style.css">
-    <script src="<?php echo JS_PATH; ?>/script.js" defer></script>
+    <link rel="stylesheet" href="public/css/style.css">
+    <script src="public/js/script.js" defer></script>
 </head>
 <body>
+    <?php
+// Показываем уведомления
+if (isset($_GET['success']) || isset($_GET['error'])) {
+    if (isset($_GET['success'])) {
+        $message = match($_GET['success']) {
+            'discount' => 'Скидка успешно активирована!',
+            'request' => 'Заявка успешно отправлена!',
+            default => 'Операция выполнена успешно!'
+        };
+        $type = 'success';
+    } else {
+        $message = match($_GET['error']) {
+            'empty_phone' => 'Введите номер телефона',
+            'discount_exists' => 'Скидка уже активирована для этого номера',
+            'empty_fields' => 'Заполните все обязательные поля',
+            'db_error' => 'Ошибка базы данных',
+            default => 'Произошла ошибка'
+        };
+        $type = 'error';
+    }
+    
+    echo "<div id='notification' class='notification notification-$type'>";
+    echo $type === 'success' ? '✅ ' : '❌ ';
+    echo $message;
+    echo "</div>";
+    
+    // JavaScript для автоматического скрытия
+    echo "
+    <script>
+        setTimeout(function() {
+            const notification = document.getElementById('notification');
+            if (notification) {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => notification.remove(), 500);
+                
+                // Убираем параметры из URL без перезагрузки
+                const url = new URL(window.location);
+                url.searchParams.delete('success');
+                url.searchParams.delete('error');
+                window.history.replaceState({}, '', url);
+            }
+        }, 4000); // Исчезает через 4 секунды
+    </script>
+    ";
+}
+?>
     <!-- Шапка -->
     <header>
         <div class="container header-container">
             <a href="#" class="logo">
-                <i class="fas fa-home"></i>
                 Новый Мир
             </a>
             <button class="mobile-menu-btn">
@@ -141,30 +187,31 @@ $base_path = '';
             <!-- Форма заявки -->
             <div id="request" class="request-form">
                 <h3>Оставить заявку на расчет</h3>
-                <form id="requestForm">
+                <form action="/new_world/handlers/request_handler.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="name">Ваше имя</label>
-                            <input type="text" id="name" class="form-control" required>
+                            <input type="text" id="name" name="name" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="phone">Телефон</label>
-                            <input type="tel" id="phone" class="form-control" required>
+                            <input type="tel" id="phone" name="phone" class="form-control" required>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="service">Услуга</label>
-                        <select id="service" class="form-control" required>
+                        <label for="service_id">Услуга</label>
+                        <select id="service_id" name="service_id" class="form-control" required>
                             <option value="">Выберите услугу</option>
-                            <option value="windows">Пластиковые окна</option>
-                            <option value="balcony">Балконы и лоджии</option>
-                            <option value="doors">Двери и входные группы</option>
-                            <option value="other">Другое</option>
+                            <option value="1">Окна</option>
+                            <option value="2">Потолки</option>
+                            <option value="3">Остекление балконов</option>
+                            <option value="4">Отделка балконов</option>
+                            <option value="5">Ремонт и обслуживание изделий ПВХ</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="message">Дополнительная информация</label>
-                        <textarea id="message" class="form-control" rows="4"></textarea>
+                        <textarea id="message" name="message" class="form-control" rows="4"></textarea>
                     </div>
                     <button type="submit" class="btn" style="width: 100%;">Отправить заявку</button>
                 </form>
@@ -203,8 +250,8 @@ $base_path = '';
             <div class="discount-content">
                 <h2>Специальное предложение!</h2>
                 <p>Оставьте заявку прямо сейчас и получите скидку 15% на установку окон. Акция действует до конца месяца!</p>
-                <form class="discount-form">
-                    <input type="tel" class="form-control" placeholder="Ваш телефон" required>
+                <form action="/new_world/handlers/discount_handler.php" method="POST">
+                    <input type="tel" name="phone" class="form-control" placeholder="Ваш телефон" required>
                     <button type="submit" class="btn btn-accent">Получить скидку</button>
                 </form>
                 <p style="font-size: 0.9rem; margin-top: 15px;">* Скидка будет зарезервирована за вашим номером телефона</p>
@@ -219,7 +266,7 @@ $base_path = '';
             <div class="reviews-grid">
                 <div class="review-card">
                     <div class="review-header">
-                        <div class="review-author">Анна Петрова</div>
+                        <div class="review-author">Кристина</div>
                         <div class="review-rating">
                             <i class="fas fa-star"></i>
                             <i class="fas fa-star"></i>
@@ -228,11 +275,18 @@ $base_path = '';
                             <i class="fas fa-star"></i>
                         </div>
                     </div>
-                    <div class="review-text">Заказывала остекление балкона. Работой очень довольна! Мастера приехали вовремя, все сделали аккуратно и чисто. Цена соответствует качеству. Рекомендую!</div>
+                    <div class="review-text">Приобрели квартиру , с окнами с деревянными , естественно сразу решили поменять .
+                            По поводу цены узнавали чуть ли не в каждой фирме . Естественно цены были космические 🥵
+                            Пока решили подождать , но в один прекрасный день нам посоветовали Виктора .
+                            Списались , сразу озвучил цену , предложил приятные условия сотрудничества, но так как на дворе зима решили подождать пару месяцев , и вот в марте мы уже с новым окном в спальне 👍 Виктор опытный,и компетентный,дал советы и хорошие представления, так как для меня это мой первый опыт . Так же учли все мои пожелания .
+                            Во время установки было видно,что работают опытные мастера,так же максимально старались соблюдать чистоту. Все показали,рассказали,на все вопросы в процессе тоже отвечали, спасибо большое. Всем рекомендую!
+                            Окно радует, да и вид комнаты преобразился💗
+                            Совсем скоро мы снова встретимся , и поменяем остальные окна и полностью остеклим болкон🤗
+                            Ребята всем советуем обращайтесь не раздумывая 😉</div>
                 </div>
                 <div class="review-card">
                     <div class="review-header">
-                        <div class="review-author">Сергей Иванов</div>
+                        <div class="review-author">Анастасия</div>
                         <div class="review-rating">
                             <i class="fas fa-star"></i>
                             <i class="fas fa-star"></i>
@@ -241,11 +295,11 @@ $base_path = '';
                             <i class="fas fa-star"></i>
                         </div>
                     </div>
-                    <div class="review-text">Менял старые деревянные окна на пластиковые. От замеров до установки - все на высшем уровне. Особенно порадовала аккуратность монтажников и уборка после работы.</div>
+                    <div class="review-text">Выражаю большую благодарность, Виктору и его команде за установку и отделку балкона, за качественную и профессиональную работу. Всё сделано в срок , работают быстро, не доставляют забот во время выполнения работ, максимально соблюдают чистоту и порядок. Спасибо Вам!</div>
                 </div>
                 <div class="review-card">
                     <div class="review-header">
-                        <div class="review-author">Ольга Смирнова</div>
+                        <div class="review-author">Евгения</div>
                         <div class="review-rating">
                             <i class="fas fa-star"></i>
                             <i class="fas fa-star"></i>
@@ -254,18 +308,18 @@ $base_path = '';
                             <i class="fas fa-star-half-alt"></i>
                         </div>
                     </div>
-                    <div class="review-text">Заказывала входную дверь. Качество отличное, установили быстро. Небольшие замечания по срокам доставки, но в целом все хорошо. Спасибо!</div>
+                    <div class="review-text">Здравствуйте. Спасибо большое за окно! Первый раз повезло выйграть в конкурсе, да ещё и в таком.Замеры были сделаны на следующий день после подведения итогов конкурса. Сегодня окно установили. С этой компанией мне было очень приятно сотрудничать и хотелось бы сказать большое спасибо специалистам за профессионализм в работе. Понравилось ответственное отношение к работе. Установку окна провели быстро и качественно. Монтажный процесс прошел гладко, без каких-либо неприятностей. Мастер профессионал своего дела. Однозначно рекомендую!👍👍👍Спасибо большое!!!</div>
                 </div>
             </div>
 
             <!-- Форма отзыва -->
             <div class="add-review-form">
                 <h3>Оставить отзыв</h3>
-                <form id="reviewForm">
+                <form action="handlers/review_handler.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="review-name">Ваше имя</label>
-                            <input type="text" id="review-name" class="form-control" required>
+                            <input type="text" id="review-name" name="name" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label>Оценка</label>
@@ -284,7 +338,7 @@ $base_path = '';
                     </div>
                     <div class="form-group">
                         <label for="review-text">Ваш отзыв</label>
-                        <textarea id="review-text" class="form-control" rows="4" required></textarea>
+                        <textarea id="review-text" name="text" class="form-control" rows="4" required></textarea>
                     </div>
                     <button type="submit" class="btn" style="width: 100%;">Отправить отзыв</button>
                 </form>
@@ -309,10 +363,6 @@ $base_path = '';
                 <div class="footer-column">
                     <h3>Контакты</h3>
                     <div class="footer-contact">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>г. Вологда, ул. Ленина, 45</span>
-                    </div>
-                    <div class="footer-contact">
                         <i class="fas fa-phone"></i>
                         <span>+7 (8172) 12-34-56</span>
                     </div>
@@ -322,9 +372,7 @@ $base_path = '';
                     </div>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-vk"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
                         <a href="#"><i class="fab fa-telegram"></i></a>
-                        <a href="#"><i class="fab fa-whatsapp"></i></a>
                     </div>
                 </div>
                 <div class="footer-column">
@@ -348,14 +396,14 @@ $base_path = '';
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2023 "Новый Мир" - установка окон и балконов. Все права защищены.</p>
+                <p>&copy; 2025 "Новый Мир" - установка окон и балконов. Все права защищены.</p>
             </div>
         </div>
     </footer>
 
     <!-- Кнопка связи -->
     <div class="contact-fixed">
-        <a href="tel:+78172345678" class="contact-btn">
+        <a href="tel:+7 900 544 46 46" class="contact-btn">
             <i class="fas fa-phone"></i>
         </a>
     </div>
