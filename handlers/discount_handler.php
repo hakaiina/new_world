@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $phone = trim($_POST['phone'] ?? '');
 
 if (empty($phone)) {
-    header('Location: /new_world/home.php?error=empty_phone');
+    header('Location: /new_world/home.php?error=empty_phone&form=discount');
     exit;
 }
 

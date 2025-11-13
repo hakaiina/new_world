@@ -15,7 +15,7 @@ $service_id = trim($_POST['service_id'] ?? '');
 $message = trim($_POST['message'] ?? '');
 
 if (empty($name) || empty($phone) || empty($service_id)) {
-    header('Location: /new_world/home.php?error=empty_fields');
+    header('Location: /new_world/home.php?error=empty_fields&form=request');
     exit;
 }
 

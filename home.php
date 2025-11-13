@@ -11,24 +11,55 @@ $base_path = '';
     <script src="public/js/script.js" defer></script>
 </head>
 <body>
-    <?php
-// Показываем уведомления
+
+<?php
+// Уведомления
 if (isset($_GET['success']) || isset($_GET['error'])) {
+    $formType = $_GET['form'] ?? 'general';
+    
     if (isset($_GET['success'])) {
         $message = match($_GET['success']) {
             'discount' => 'Скидка успешно активирована!',
             'request' => 'Заявка успешно отправлена!',
+            'review' => 'Отзыв успешно добавлен!',
             default => 'Операция выполнена успешно!'
         };
         $type = 'success';
     } else {
-        $message = match($_GET['error']) {
-            'empty_phone' => 'Введите номер телефона',
-            'discount_exists' => 'Скидка уже активирована для этого номера',
-            'empty_fields' => 'Заполните все обязательные поля',
-            'db_error' => 'Ошибка базы данных',
-            default => 'Произошла ошибка'
-        };
+        if ($formType === 'review') {
+            $message = match($_GET['error']) {
+                'empty_fields' => 'Заполните имя, текст отзыва и оценку',
+                'invalid_rating' => 'Выберите оценку от 1 до 5 звёзд',
+                'name_too_long' => 'Имя слишком длинное (максимум 100 символов)',
+                'text_too_long' => 'Текст отзыва слишком длинный (максимум 1000 символов)',
+                'db_error' => 'Ошибка при сохранении отзыва',
+                default => 'Произошла ошибка при отправке отзыва'
+            };
+        } elseif ($formType === 'discount') {
+            $message = match($_GET['error']) {
+                'empty_phone' => 'Введите номер телефона для получения скидки',
+                'discount_exists' => 'Скидка уже активирована для этого номера',
+                'db_error' => 'Ошибка при активации скидки',
+                default => 'Произошла ошибка'
+            };
+        } elseif ($formType === 'request') {
+            $message = match($_GET['error']) {
+                'empty_fields' => 'Заполните все обязательные поля заявки',
+                'db_error' => 'Ошибка при отправке заявки',
+                default => 'Произошла ошибка при отправке заявки'
+            };
+        } else {
+            $message = match($_GET['error']) {
+                'empty_phone' => 'Введите номер телефона',
+                'discount_exists' => 'Скидка уже активирована для этого номера',
+                'empty_fields' => 'Заполните все обязательные поля',
+                'invalid_rating' => 'Выберите оценку от 1 до 5 звёзд',
+                'name_too_long' => 'Имя слишком длинное (максимум 100 символов)',
+                'text_too_long' => 'Текст отзыва слишком длинный (максимум 1000 символов)',
+                'db_error' => 'Ошибка базы данных',
+                default => 'Произошла ошибка'
+            };
+        }
         $type = 'error';
     }
     
@@ -37,7 +68,6 @@ if (isset($_GET['success']) || isset($_GET['error'])) {
     echo $message;
     echo "</div>";
     
-    // JavaScript для автоматического скрытия
     echo "
     <script>
         setTimeout(function() {
@@ -51,9 +81,10 @@ if (isset($_GET['success']) || isset($_GET['error'])) {
                 const url = new URL(window.location);
                 url.searchParams.delete('success');
                 url.searchParams.delete('error');
+                url.searchParams.delete('form');
                 window.history.replaceState({}, '', url);
             }
-        }, 4000); // Исчезает через 4 секунды
+        }, 4000);
     </script>
     ";
 }
@@ -315,7 +346,7 @@ if (isset($_GET['success']) || isset($_GET['error'])) {
             <!-- Форма отзыва -->
             <div class="add-review-form">
                 <h3>Оставить отзыв</h3>
-                <form action="handlers/review_handler.php" method="POST">
+                <form action="/new_world/handlers/review_handler.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="review-name">Ваше имя</label>
@@ -332,7 +363,7 @@ if (isset($_GET['success']) || isset($_GET['error'])) {
                                     <span class="rating-star" data-value="5"><i class="far fa-star"></i></span>
                                 </div>
                                 <span id="rating-value">0/5</span>
-                                <input type="hidden" id="rating" name="rating" value="0">
+                                <input type="hidden" id="rating" name="rating" value="0" required>
                             </div>
                         </div>
                     </div>
